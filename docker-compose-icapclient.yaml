@@ -1,0 +1,42 @@
+version: '3'
+services:
+  icapclient:
+    ## ref: https://pypi.org/project/icapclient3/
+    container_name: icapclient
+    restart: always
+    image: ubuntu:22.04
+    command:
+      - /bin/bash
+      - -c
+      - |
+        ## install packages
+        apt update && apt install -y python3 python3-pip libicapapi-dev gcc wget libssl-dev python3-dev
+        pip3 install setuptools
+        mkdir /icap && cd /icap
+        wget https://files.pythonhosted.org/packages/5c/87/4f44f77161269138dce49c1f67221265c0b40d93ca65d35b23ee52325d40/icapclient3-1.2.1.tar.gz
+        tar zxvf icapclient3-1.2.1.tar.gz
+        cd icapclient3-1.2.1
+        python3 setup.py build
+        python3 setup.py install
+
+        ## add eicar file
+        cat > /eicar.txt <<"EOF"
+        X5O!P%@AP[4\PZX54(P^)7CC)7}$$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$$H+H*
+        EOF
+
+        ## add icaptest script
+        cat > /icaptest1.py <<EOF
+        import icapclient
+        from pprint import pprint
+        conn = icapclient.ICAPConnection('10.1.20.44')
+        conn.request('REQMOD', '/eicar.txt', service="avscan")
+
+        resp = conn.getresponse()
+        pprint(resp.icap_status)
+        pprint(resp.icap_reason)
+        pprint(resp.icap_headers)
+        EOF
+
+        ## start never-ending tail
+        tail -f /dev/null
+
